@@ -1,7 +1,9 @@
 import cv2 as cv
 import numpy as np
 
-img_path = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7104.JPG'
+img_path = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7106.JPG'
+# img_path = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
+
 
 # np.set_printoptions(threshold=np.nan)
 
@@ -21,7 +23,6 @@ def run():
     thresh, p_loc_bw_img = cv.threshold(p_loc_img, 10, 255, cv.THRESH_BINARY)
 
     blob_params = cv.SimpleBlobDetector_Params()
-    blob_params.blobColor = 255
     blob_params.filterByConvexity = False
 
     blob_detector = cv.SimpleBlobDetector_create(blob_params)
@@ -30,32 +31,59 @@ def run():
 
     points = np.asarray([kp.pt for kp in keypoints])
 
+    print(points)
+
     x_values = points[:, 0]
     y_values = points[:, 1]
 
     left_x = min(x_values)
     right_x = max(x_values)
-    print('left_x=%.2lf, right_x=%.2lf' % (left_x, right_x))
+    top_y = min(y_values)
+    bottom_y = max(y_values)
     mid_x = left_x + (right_x - left_x) / 2.0
+    mid_y = top_y + (bottom_y - top_y) / 2.0
 
     min_dist = -1
-    mid_key_index = 0
+    mid_point = None
 
-    for i, kp in enumerate(keypoints):
+    p_loc_img_color = cv.cvtColor(p_loc_bw_img, cv.COLOR_GRAY2BGR)
+
+    # Note to self:
+    # Our current algorithm is just finding the seed closest to the center.
+    # This works for most images; however, for many images the wanted seed is off-center.
+    # We can't use The numbers above the seeds as a reference point either because
+    # the number isn't always shown clearly.
+    # Maybe we could look for the number and if we find it, use the seed beneath that number
+    # Otherwise, prompt the user to select a seed for the given image.
+
+    for kp in keypoints:
         x = kp.pt[0]
+        y = kp.pt[1]
+        half_size = 30
+        cv.rectangle(
+            p_loc_img_color,
+            (int(x) - half_size, int(y) + half_size),
+            (int(x) + half_size, int(y) - half_size),
+            (255, 255, 0),
+            thickness=3
+        )
         dist = abs(x - mid_x)
-        if dist < min_dist or min_dist < 0:
+        dist_y = abs(y - mid_y)
+        print("min_dist=%.2lf, this_dist=%.2lf, mid=(%.2lf, %.2lf), pt=(%.2lf, %.2lf), dist_y=%.2lf" % (min_dist, dist, mid_x, mid_y, x, y, dist_y))
+        if dist_y < 250 and (dist < min_dist or min_dist < 0):
+            print("\tsetting new dist!")
             min_dist = dist
-            mid_key_index = i
+            mid_point = kp.pt
 
-    focus_x = int(x_values[mid_key_index])
-    focus_y = int(y_values[mid_key_index])
-    half_focus_area_width = 300 / 2
-    half_focus_area_height = 500 / 2
+    focus_x = int(mid_point[0])
+    focus_y = int(mid_point[1])
+    half_focus_area_width = 500 / 2
+    half_focus_area_height = 600 / 2
 
     print(focus_x, focus_y)
 
-    p_loc_img_color = cv.cvtColor(p_loc_bw_img, cv.COLOR_GRAY2BGR)
+    print("image width: %.2lf, image height: %.2lf" % (w, h))
+
     focus_img = cv.rectangle(
         p_loc_img_color,
         (focus_x - half_focus_area_width, focus_y + half_focus_area_width),
