@@ -1,26 +1,55 @@
 import cv2 as cv
 import numpy as np
 
-img_path = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7106.JPG'
-# img_path = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
+img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7106.JPG'
+img_path_2 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
 
+img = cv.imread(img_path_1, cv.IMREAD_COLOR)
+h, w = img.shape[:2]
 
 # np.set_printoptions(threshold=np.nan)
 
+def runBackProjection():
+    seed = cv.imread('./seed.jpg')
+    hsv = cv.cvtColor(seed, cv.COLOR_BGR2HSV)
 
-def run():
-    img = cv.imread(img_path, cv.IMREAD_COLOR)
-    h, w = img.shape[:2]
+    target = cv.imread(img_path_2)
+    hsvt = cv.cvtColor(target, cv.COLOR_BGR2HSV)
 
+    #calculate object histogram
+    roihist = cv.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
+
+    # normalize histogram and apply backprojection
+    cv.normalize(roihist, roihist, 0, 255, cv.NORM_MINMAX)
+    dst = cv.calcBackProject([hsvt], [1, 1, 1], roihist, [0, 180, 0, 256], 1)
+
+    # Now convolute with circular disc
+    disc = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
+    dst = cv.filter2D(dst, -1, disc)
+
+    # threshold and binary AND
+    # thresh = cv.adaptiveThreshold(dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 0)
+    ret, thresh = cv.threshold(dst, 60, 255, cv.THRESH_BINARY)
+    thresh = cv.merge((thresh,thresh,thresh))
+    res = cv.bitwise_and(target,thresh)
+
+    stackedRes = np.vstack((target,thresh,res))
+
+    cv.imwrite('./res.jpg', stackedRes);
+
+    # run(src=res)
+
+def run(src = img):
     # get masks for planting locations
-    hue_img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    hue_img = cv.cvtColor(src, cv.COLOR_BGR2HSV)
     lower_hue_range = cv.inRange(hue_img, np.array([10, 40, 140]), np.array([30, 70, 210]))
     p_loc_mask = cv.addWeighted(lower_hue_range, 1.0, 1, 1.0, 0.0)
 
     # Apply mask to black + white image
-    grey_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    grey_img = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
     p_loc_img = cv.bitwise_and(p_loc_mask, grey_img)
-    thresh, p_loc_bw_img = cv.threshold(p_loc_img, 10, 255, cv.THRESH_BINARY)
+    # thresh, p_loc_bw_img = cv.threshold(p_loc_img, 10, 255, cv.THRESH_BINARY)
+    p_loc_bw_img = cv.adaptiveThreshold(p_loc_img,255,cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY,7,-3)
 
     blob_params = cv.SimpleBlobDetector_Params()
     blob_params.filterByConvexity = False
@@ -95,7 +124,7 @@ def run():
         ('focus_rec', focus_img),
         ('p_loc_bw', p_loc_bw_img),
         ('p_loc', p_loc_img),
-        ('original', img),
+        ('original', src),
         ('hue_img', hue_img),
         ('lower_hue_range', lower_hue_range),
         ('lower_mask', p_loc_mask),
@@ -142,4 +171,5 @@ def show_images(images, w, h):
             index -= 1
 
 
-run()
+# run()
+runBackProjection()
