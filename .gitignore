@@ -6,3 +6,7 @@ IMG_7104.JPG-hue.jpg
 seed.jpg
 seed.jpg~
 res.jpg
+__pycache__/mask_helpers.cpython-37.pyc
+__pycache__/rangler_utils.cpython-37.pyc
+mask_helpers.pyc
+*.pyc

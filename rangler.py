@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+import mask_helpers as helpers
 
 img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7106.JPG'
 img_path_2 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
@@ -10,124 +11,46 @@ h, w = img.shape[:2]
 # np.set_printoptions(threshold=np.nan)
 
 def runBackProjection():
-    seed = cv.imread('./seed.jpg')
-    hsv = cv.cvtColor(seed, cv.COLOR_BGR2HSV)
-
-    target = cv.imread(img_path_2)
+    roi = cv.imread('seed.jpg')
+    hsv = cv.cvtColor(roi, cv.COLOR_BGR2HSV)
+    target = cv.imread(img_path_1)
     hsvt = cv.cvtColor(target, cv.COLOR_BGR2HSV)
-
-    #calculate object histogram
+    # calculating object histogram
     roihist = cv.calcHist([hsv], [0, 1], None, [180, 256], [0, 180, 0, 256])
-
     # normalize histogram and apply backprojection
     cv.normalize(roihist, roihist, 0, 255, cv.NORM_MINMAX)
-    dst = cv.calcBackProject([hsvt], [1, 1, 1], roihist, [0, 180, 0, 256], 1)
-
+    dst = cv.calcBackProject([hsvt], [0, 1], roihist, [0, 180, 0, 256], 1)
     # Now convolute with circular disc
     disc = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
-    dst = cv.filter2D(dst, -1, disc)
-
+    cv.filter2D(dst, -1, disc, dst)
     # threshold and binary AND
-    # thresh = cv.adaptiveThreshold(dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 0)
-    ret, thresh = cv.threshold(dst, 60, 255, cv.THRESH_BINARY)
-    thresh = cv.merge((thresh,thresh,thresh))
-    res = cv.bitwise_and(target,thresh)
+    ret, thresh = cv.threshold(dst, 10, 255, 0)
+    thresh = cv.merge((thresh, thresh, thresh))
+    res = cv.bitwise_and(target, thresh)
+    stackedRes = np.vstack((target, thresh, res))
 
-    stackedRes = np.vstack((target,thresh,res))
+    cv.imwrite('res.jpg', stackedRes)
 
-    cv.imwrite('./res.jpg', stackedRes);
-
-    # run(src=res)
+    run(src=target)
 
 def run(src = img):
     # get masks for planting locations
     hue_img = cv.cvtColor(src, cv.COLOR_BGR2HSV)
-    lower_hue_range = cv.inRange(hue_img, np.array([10, 40, 140]), np.array([30, 70, 210]))
-    p_loc_mask = cv.addWeighted(lower_hue_range, 1.0, 1, 1.0, 0.0)
+
+    root_mask = helpers.get_root_mask(hue_img)
+    seed_mask = helpers.get_seed_mask(hue_img)
 
     # Apply mask to black + white image
     grey_img = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
-    p_loc_img = cv.bitwise_and(p_loc_mask, grey_img)
-    # thresh, p_loc_bw_img = cv.threshold(p_loc_img, 10, 255, cv.THRESH_BINARY)
-    p_loc_bw_img = cv.adaptiveThreshold(p_loc_img,255,cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY,7,-3)
 
-    blob_params = cv.SimpleBlobDetector_Params()
-    blob_params.filterByConvexity = False
-
-    blob_detector = cv.SimpleBlobDetector_create(blob_params)
-
-    keypoints = blob_detector.detect(p_loc_bw_img)
-
-    points = np.asarray([kp.pt for kp in keypoints])
-
-    print(points)
-
-    x_values = points[:, 0]
-    y_values = points[:, 1]
-
-    left_x = min(x_values)
-    right_x = max(x_values)
-    top_y = min(y_values)
-    bottom_y = max(y_values)
-    mid_x = left_x + (right_x - left_x) / 2.0
-    mid_y = top_y + (bottom_y - top_y) / 2.0
-
-    min_dist = -1
-    mid_point = None
-
-    p_loc_img_color = cv.cvtColor(p_loc_bw_img, cv.COLOR_GRAY2BGR)
-
-    # Note to self:
-    # Our current algorithm is just finding the seed closest to the center.
-    # This works for most images; however, for many images the wanted seed is off-center.
-    # We can't use The numbers above the seeds as a reference point either because
-    # the number isn't always shown clearly.
-    # Maybe we could look for the number and if we find it, use the seed beneath that number
-    # Otherwise, prompt the user to select a seed for the given image.
-
-    for kp in keypoints:
-        x = kp.pt[0]
-        y = kp.pt[1]
-        half_size = 30
-        cv.rectangle(
-            p_loc_img_color,
-            (int(x) - half_size, int(y) + half_size),
-            (int(x) + half_size, int(y) - half_size),
-            (255, 255, 0),
-            thickness=3
-        )
-        dist = abs(x - mid_x)
-        dist_y = abs(y - mid_y)
-        print("min_dist=%.2lf, this_dist=%.2lf, mid=(%.2lf, %.2lf), pt=(%.2lf, %.2lf), dist_y=%.2lf" % (min_dist, dist, mid_x, mid_y, x, y, dist_y))
-        if dist_y < 250 and (dist < min_dist or min_dist < 0):
-            print("\tsetting new dist!")
-            min_dist = dist
-            mid_point = kp.pt
-
-    focus_x = int(mid_point[0])
-    focus_y = int(mid_point[1])
-    half_focus_area_width = 500 / 2
-    half_focus_area_height = 600 / 2
-
-    print(focus_x, focus_y)
-
-    print("image width: %.2lf, image height: %.2lf" % (w, h))
-
-    focus_img = cv.rectangle(
-        p_loc_img_color,
-        (focus_x - half_focus_area_width, focus_y + half_focus_area_width),
-        (focus_x + half_focus_area_width, focus_y - half_focus_area_height),
-        (0, 255, 0),
-        thickness=6)
+    focus_img = helpers.find_blobs(grey_img, seed_mask)
 
     show_images([
         ('focus_rec', focus_img),
-        ('p_loc_bw', p_loc_bw_img),
-        ('p_loc', p_loc_img),
+        ('lower_mask', seed_mask),
+        ('root_mask', root_mask),
         ('original', src),
         ('hue_img', hue_img),
-        ('lower_hue_range', lower_hue_range),
-        ('lower_mask', p_loc_mask),
         ('grey', grey_img),
     ], w, h)
 
@@ -135,6 +58,7 @@ def run(src = img):
 
 def onMouseClicked(event, x, y, flags, img_param):
     if event == cv.EVENT_LBUTTONUP:
+        print('position: ')
         print(img_param[y, x])
 
 
