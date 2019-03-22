@@ -1,6 +1,6 @@
 import cv2 as cv
 import numpy as np
-import mask_helpers as helpers
+from entities.seed import RangleImage
 
 img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7106.JPG'
 img_path_2 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
@@ -35,24 +35,24 @@ def run_back_projection():
 
 
 def run(src=img):
-    # get masks for planting locations
-    hue_img = cv.cvtColor(src, cv.COLOR_BGR2HSV)
+    rangler: RangleImage = RangleImage(src)
 
-    root_mask = helpers.get_root_mask(hue_img)
-    seed_mask = helpers.get_seed_mask(hue_img)
+    rangler.findSeeds()
 
-    # Apply mask to black + white image
-    grey_img = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
-
-    focus_img = helpers.find_blobs(grey_img, seed_mask)
+    img_with_seed_contours = rangler.img.copy()
+    cv.drawContours(
+        img_with_seed_contours,
+        rangler.seed_contours,
+        -1,
+        (255, 0, 0),
+        thickness=3
+    )
 
     show_images([
-        ('focus_rec', focus_img),
-        ('lower_mask', seed_mask),
-        ('root_mask', root_mask),
-        ('original', src),
-        ('hue_img', hue_img),
-        ('grey', grey_img),
+        ('seed_mask', rangler.seed_mask),
+        ('seed_contours', img_with_seed_contours),
+        ('original', rangler.img),
+        ('hsv', cv.cvtColor(rangler.img, cv.COLOR_BGR2HSV))
     ], w, h)
 
     cv.destroyAllWindows()
@@ -83,7 +83,7 @@ def show_image(name, img, w, h):
 
 def show_images(images, w, h):
     length = len(images)
-    index = 0;
+    index = 0
     while -1 < index < length:
         cur_img = images[index]
         show_image(cur_img[0], cur_img[1], w, h)
