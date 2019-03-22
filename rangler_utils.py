@@ -3,6 +3,25 @@ import cv2 as cv
 # import numpy as np
 
 
+def find_and_draw_contours(bgr_img, contour_area_predicate, thresh_value=10):
+    gray_img = cv.cvtColor(bgr_img, cv.COLOR_BGR2GRAY)
+
+    ret, thresh = cv.threshold(gray_img, thresh_value, 255, cv.THRESH_BINARY)
+
+    contours, hierarchy = cv.findContours(thresh.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+    rangler_image = RanglerImage(bgr_img);
+
+    for c in contours:
+        area = cv.contourArea(c)
+        if contour_area_predicate(area):
+            rangler_image.add_contour(c)
+
+    rangler_image.draw_contours()
+
+    return rangler_image.img
+
+
 class RanglerImage:
     """
     Represents a Mat in opencv
@@ -10,6 +29,7 @@ class RanglerImage:
     def __init__(self, mat):
         self.img = mat
         self.__areas = []
+        self.__contours = []
 
     def combine(self, other):
         """
@@ -19,12 +39,16 @@ class RanglerImage:
         :return: the combined Image
         """
         combined_mat = cv.bitwise_or(self.img, other.img)
-        combined_img = Image(combined_mat)
+        combined_img = RanglerImage(combined_mat)
         combined_img.__areas = self.__areas + other.__areas
+        combined_img.__contours = self.__contours + other.__contours
         return combined_img
 
     def add_area(self, area):
         self.__areas.append(area)
+
+    def add_contour(self, contour):
+        self.__contours.append(contour)
 
     def get_first_area(self, predicate):
         for a in self.__areas:
@@ -34,6 +58,11 @@ class RanglerImage:
     def draw_areas(self):
         for a in self.__areas:
             a.draw(self.img)
+
+    def draw_contours(self):
+        length = len(self.__contours)
+        for index in range(length):
+            cv.drawContours(self.img, self.__contours, index, (0, 255, 0), thickness=3)
 
 
 class LocationType(Enum):

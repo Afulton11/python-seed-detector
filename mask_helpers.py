@@ -1,13 +1,27 @@
 import cv2 as cv
 import numpy as np
-from rangler_utils import RanglerImage, ImageLocation, LocationType
+from rangler_utils import RanglerImage, ImageLocation, LocationType, find_and_draw_contours
+
+
+def crop_bottom(image, amt_left=2.5):
+    cropped_img = image[int(image.shape[0]/amt_left):image.shape[0]]
+    return cropped_img
 
 
 def get_root_mask(hue_img):
+    h, w = hue_img.shape[:2]
     root_upper_range = cv.inRange(hue_img, np.array([100, 0, 140]), np.array([255, 30, 180]))
-    root_mask = cv.addWeighted(root_upper_range, 1.0, 1, 1.0, 0.0)
+    # root_mask = cv.addWeighted(root_upper_range, 1.0, 1, 1.0, 1.0)
 
-    return root_mask
+    # crop top_half
+    cropped_img = crop_bottom(root_upper_range)
+
+    bgr_img = cv.cvtColor(cropped_img, cv.COLOR_GRAY2BGR)
+
+    def area_predicate(area): return 25 < area < (h * w / 8)
+    root_image = find_and_draw_contours(bgr_img, area_predicate)
+    # root_image = find_and_draw_contours(root_image, area_predicate)
+    return root_image
 
 
 def get_seed_mask(hue_img):
@@ -20,6 +34,7 @@ def get_seed_mask(hue_img):
     seed_mask = cv.bitwise_or(lower_mask, upper_mask)
 
     return seed_mask
+
 
 def find_blobs(grey_img, mask, blob_kind = LocationType.OTHER):
     blob_img = cv.bitwise_and(mask, grey_img)
@@ -70,10 +85,7 @@ def find_blobs(grey_img, mask, blob_kind = LocationType.OTHER):
         bw_img.add_area(area)
         dist = abs(x - mid_x)
         dist_y = abs(y - mid_y)
-        print("min_dist=%.2lf, this_dist=%.2lf, mid=(%.2lf, %.2lf), pt=(%.2lf, %.2lf), dist_y=%.2lf" % (
-        min_dist, dist, mid_x, mid_y, x, y, dist_y))
         if dist_y < 250 and (dist < min_dist or min_dist < 0):
-            print("\tsetting new dist!")
             min_dist = dist
             mid_point = kp.pt
 

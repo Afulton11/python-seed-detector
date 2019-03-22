@@ -10,7 +10,7 @@ h, w = img.shape[:2]
 
 # np.set_printoptions(threshold=np.nan)
 
-def runBackProjection():
+def run_back_projection():
     roi = cv.imread('seed.jpg')
     hsv = cv.cvtColor(roi, cv.COLOR_BGR2HSV)
     target = cv.imread(img_path_1)
@@ -33,7 +33,8 @@ def runBackProjection():
 
     run(src=target)
 
-def run(src = img):
+
+def run(src=img):
     # get masks for planting locations
     hue_img = cv.cvtColor(src, cv.COLOR_BGR2HSV)
 
@@ -56,7 +57,8 @@ def run(src = img):
 
     cv.destroyAllWindows()
 
-def onMouseClicked(event, x, y, flags, img_param):
+
+def on_mouse_clicked(event, x, y, flags, img_param):
     if event == cv.EVENT_LBUTTONUP:
         print('position: ')
         print(img_param[y, x])
@@ -74,8 +76,9 @@ def show_image(name, img, w, h):
     img_resized = cv.resize(img, (window_width, window_height))
     cv.namedWindow(name, cv.WINDOW_NORMAL)
     cv.resizeWindow(name, window_width, window_height)
+    cv.moveWindow(name, 0, 0)
     cv.imshow(name, img_resized)
-    cv.setMouseCallback(name, onMouseClicked, img_resized)
+    cv.setMouseCallback(name, on_mouse_clicked, img_resized)
 
 
 def show_images(images, w, h):
@@ -96,4 +99,4 @@ def show_images(images, w, h):
 
 
 # run()
-runBackProjection()
+run_back_projection()
