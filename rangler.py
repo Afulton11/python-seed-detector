@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
-from entities.seed import RangleImage
+from entities.seed import SeedSection
+from entities.rangle_image import RangleImage
 
 img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7106.JPG'
 img_path_2 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
@@ -39,7 +40,7 @@ def run(src=img):
 
     rangler.findSeeds()
 
-    img_with_seed_contours = rangler.img.copy()
+    img_with_seed_contours = rangler.original_image.copy()
     cv.drawContours(
         img_with_seed_contours,
         rangler.seed_contours,
@@ -48,12 +49,19 @@ def run(src=img):
         thickness=3
     )
 
-    show_images([
-        ('seed_mask', rangler.seed_mask),
-        ('seed_contours', img_with_seed_contours),
-        ('original', rangler.img),
-        ('hsv', cv.cvtColor(rangler.img, cv.COLOR_BGR2HSV))
-    ], w, h)
+    image_window_list = [
+        ('seed_mask', rangler.seed_mask, w, h),
+        ('seed_contours', img_with_seed_contours, w, h),
+        ('original', rangler.original_image, w, h),
+        ('hsv', cv.cvtColor(rangler.original_image, cv.COLOR_BGR2HSV), w, h)
+    ]
+
+    for index, seed in enumerate(rangler.seeds):
+        image_window_list.insert(0, 
+            ('seed_%d' % (index + 1 ), seed.img, seed.width, seed.height)
+        )
+
+    show_images(image_window_list)
 
     cv.destroyAllWindows()
 
@@ -81,12 +89,12 @@ def show_image(name, img, w, h):
     cv.setMouseCallback(name, on_mouse_clicked, img_resized)
 
 
-def show_images(images, w, h):
+def show_images(images):
     length = len(images)
     index = 0
     while -1 < index < length:
         cur_img = images[index]
-        show_image(cur_img[0], cur_img[1], w, h)
+        show_image(cur_img[0], cur_img[1], cur_img[2], cur_img[3])
         key = cv.waitKey(0)
         cv.destroyWindow(cur_img[0])
 
