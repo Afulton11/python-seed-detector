@@ -57,8 +57,7 @@ def run(src=img):
     ]
 
     for index, seed in enumerate(rangler.seeds):
-        root_img = seed.root_img
-        drawn_root_img = cv.drawContours(root_img, seed.root_contours, -1, (255, 0, 0), thickness=3)
+        drawn_root_img = cv.drawContours(seed.root_img, seed.root_contours, -1, (255, 0, 0), thickness=3)
         root_h, root_w = drawn_root_img.shape[:2]
         image_window_list.insert(0,
             ('roots_%d' % (index + 1), drawn_root_img, root_w, root_h)

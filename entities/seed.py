@@ -15,17 +15,11 @@ class SeedSection:
     Represents a section of a seed in a image.
     """
 
-    img = None
-    root_img = None
-    root_contours = []
-
-    #debugging images
-    combined_hsv = None
-
     def __init__(self, mat, seed_centroid: Location):
         self.img = mat
         self.seed_centroid = seed_centroid
         self.root_img = get_image_below_y(mat, seed_centroid.y)
+        self.root_contours = []
 
         h, w = self.img.shape[:2]
         self.width = w
@@ -50,6 +44,7 @@ class SeedSection:
         combined_hsv = cv.bitwise_or(upper_hsv, lower_hsv)
         combined_hsv = cv.bitwise_or(combined_hsv, lower_hsv2)
         # combined_hsv = cv.bitwise_or(combined_hsv, upper_hsv2)
+        # debug combined image
         self.combined_hsv = combined_hsv
         
         # Threshold the upper_hsv image so that we can find contours
