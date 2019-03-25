@@ -91,7 +91,7 @@ class RangleImage:
             right: int = int(clamp(centroid.x + (seed_width / 2), 0, self.original_width))
 
             seed_image = self.original_image[top : bottom, left : right]
-            section = SeedSection(seed_image)
+            section = SeedSection(seed_image, centroid)
             sections.append(section)
 
         return sections
