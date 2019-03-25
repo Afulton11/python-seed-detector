@@ -58,7 +58,7 @@ def run(src=img):
 
     for index, seed in enumerate(rangler.seeds):
         image_window_list.insert(0, 
-            ('seed_%d' % (index + 1 ), seed.img, seed.width, seed.height)
+            ('seed_%d' % (index + 1), seed.img, seed.width, seed.height)
         )
 
     show_images(image_window_list)

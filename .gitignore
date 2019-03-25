@@ -1,5 +1,6 @@
 venv/
 .idea/
+.vscode/
 .DS_Store
 log.txt
 IMG_7104.JPG-hue.jpg

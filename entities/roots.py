@@ -28,10 +28,10 @@ class RootAngle:
     def __init__(self, left_root: RootInfo, right_root: RootInfo):
         self.__left_root = left_root
         self.__right_root = right_root
-        self.angle = self.__calculateAngle(left_root, right_root)
+        self.angle = self.__calculate_angle(left_root, right_root)
 
 
-    def __calculateAngle(self, left_root: RootInfo, right_root: RootInfo):
+    def __calculate_angle(self, left_root: RootInfo, right_root: RootInfo):
         return left_root.angleWithHorizontal - right_root.angleWithHorizontal
 
 class RootFinder:

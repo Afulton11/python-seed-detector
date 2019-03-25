@@ -28,9 +28,9 @@ class SeedSection:
         self.height = h
 
         print('[SeedSection]: Creating with size(%d, %d)' % (self.width, self.height))
-        self.findRootContours()
+        self.find_root_contours()
 
-    def findRootContours(self):
+    def find_root_contours(self):
         """
         Finds the contours of the roots in the section
         """
