@@ -3,20 +3,8 @@ import numpy as np
 from typing import List
 from entities.location import Location
 from entities.seed import SeedSection
+from entities.utils import find_centroid, clamp
 
-
-def find_centroid(contour) -> Location:
-    m = cv.moments(contour)
-    if (m == None or m['m00'] == 0):
-        return Location(0, 0)
-
-    cx = int(m['m10']/m['m00'])
-    cy = int(m['m01']/m['m00'])
-    return Location(cx, cy)
-
-
-def clamp(value, lower, upper):
-    return max(lower, min(upper, value))
 
 class RangleImage:
     """
@@ -29,6 +17,7 @@ class RangleImage:
 
     def __init__(self, mat):
         self.original_image = mat
+        self.blurred_image = cv.GaussianBlur(mat, (25, 25), 0)
         self.seeds = List[SeedSection]
         self.seed_contours = []
 
@@ -37,7 +26,7 @@ class RangleImage:
         self.original_height = h
 
     def findSeeds(self):
-        hue_img = cv.cvtColor(self.original_image, cv.COLOR_BGR2HSV)
+        hue_img = cv.cvtColor(self.blurred_image, cv.COLOR_BGR2HSV)
 
         lower_hue_range = cv.inRange(hue_img, np.array([0, 45, 140]), np.array([20, 95, 215]))
         upper_hue_range = cv.inRange(hue_img, np.array([10, 20, 160]), np.array([40, 50, 200]))
@@ -90,8 +79,10 @@ class RangleImage:
             left: int = int(clamp(centroid.x - (seed_width / 2), 0, self.original_width))
             right: int = int(clamp(centroid.x + (seed_width / 2), 0, self.original_width))
 
-            seed_image = self.original_image[top : bottom, left : right]
-            section = SeedSection(seed_image, centroid)
+            seed_image = self.blurred_image[top : bottom, left : right]
+            relative_seed_centroid_x = centroid.x - left
+            
+            section = SeedSection(seed_image, centroid, relative_seed_centroid_x)
             sections.append(section)
 
         return sections

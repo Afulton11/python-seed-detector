@@ -53,17 +53,23 @@ def run(src=img):
         ('seed_mask', rangler.seed_mask, w, h),
         ('seed_contours', img_with_seed_contours, w, h),
         ('original', rangler.original_image, w, h),
+        ('blurred', rangler.blurred_image, w, h),
         ('hsv', cv.cvtColor(rangler.original_image, cv.COLOR_BGR2HSV), w, h)
     ]
 
     for index, seed in enumerate(rangler.seeds):
-        drawn_root_img = cv.drawContours(seed.root_img, seed.root_contours, -1, (255, 0, 0), thickness=3)
+        drawn_root_img = cv.drawContours(seed.root_img.copy(), seed.root_contours, -1, (255, 0, 0), thickness=3)
         root_h, root_w = drawn_root_img.shape[:2]
+        seed_line_img = seed.root_img.copy()
+        seed.draw_lines(seed_line_img)
         image_window_list.insert(0,
-            ('roots_%d' % (index + 1), drawn_root_img, root_w, root_h)
+            ('root_lines_%d' % (index + 1), seed_line_img, root_w, root_h)
         )
         image_window_list.insert(0,
-            ('roots_filtered_%d' % (index + 1), seed.combined_hsv, root_w, root_h)
+            ('root_contours_%d' % (index + 1), drawn_root_img, root_w, root_h)
+        )
+        image_window_list.insert(0,
+            ('roots_filtered_%d' % (index + 1), seed.root_mask, root_w, root_h)
         )
         image_window_list.insert(0,
             ('seed_%d' % (index + 1), seed.img, seed.width, seed.height)
