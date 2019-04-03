@@ -14,3 +14,6 @@ def find_centroid(contour) -> Location:
 
 def clamp(value, lower, upper):
     return max(lower, min(upper, value))
+
+def get_cv_max_int() -> int:
+    return 2_147_483_000

@@ -1,8 +1,7 @@
-import sys
 import math
 import cv2 as cv
 import numpy as np
-from entities.utils import find_centroid, clamp
+from entities.utils import find_centroid, clamp, get_cv_max_int
 from entities.location import Location
 
 class Line:
@@ -21,36 +20,40 @@ class Line:
         vx = float(self.point1.x - self.point2.x)
         vy = float(self.point1.y - self.point2.y)
 
-        if vx == 0:
-            return sys.maxsize
-
-        return vy / vx
+        try:
+            return vy / vx
+        except ZeroDivisionError:
+            return get_cv_max_int()
 
     def _b(self):
         return (self.point1.y - self._slope() * self.point1.x)
 
-    def distance(self, point: Location) -> int:
+    def distance(self, point: Location) -> float:
         m = self._slope()
         b = self._b()
-        if m == sys.maxsize:
-            return sys.maxsize
-    
-        line_point = Location(point.x, m * point.x + b)
+
+        line_point = self.pointAtX(point.x)
         dist = line_point.distance(point)
 
-        print('[distance]: point=[%s] line_pint=[%s] dist=[%d]' % (point, line_point, dist))
-        return int(round(dist))
+        return dist
 
-    def combine(self, other):
-        def avgValue(x_1, x_2) -> int:
-            return int(round((x_1 + x_2) / 2))
-        def avgPoint(point_1, point_2) -> Location:
-            return Location(avgValue(point_1.x, point_2.x), avgValue(point_1.y, point_2.y))
-        
+    def average(self, other):
         return Line(
-            avgPoint(self.point1, other.point1),
-            avgPoint(self.point2, other.point2)
+            self.point1.average(other.point1),
+            self.point2.average(other.point2)
         )
+    
+    def pointAtX(self, x: float) -> Location:
+        y =  self._slope() * x + self._b()
+        if (self._slope() >= get_cv_max_int()):
+            y = x
+        return Location(x, y)
+
+    def pointAtY(self, y: float) -> Location:
+        x =  (y / self._slope()) - self._b()
+        if (self._slope() >= get_cv_max_int()):
+            x = y
+        return Location(x, y)
 
     def draw(self, mat):
         print('[Drawing line]: %s' % (self.__str__()))
@@ -66,16 +69,36 @@ class Line:
         right_point = Location(-1, -1)
 
         left_point.x = 0
-        left_point.y = int(round(b))
+        left_point.y = b
 
         right_point.x = w
-        right_point.y = int(round(m * right_point.x + b))
+        right_point.y = m * right_point.x + b
 
-        cv.line(mat, (left_point.x, left_point.y), (right_point.x, right_point.y), (0, 0, 255), thickness=2, lineType=cv.LINE_AA)
+        # right_point.x = clamp(right_point.x, 0, get_cv_max_int())
+        # right_point.y = clamp(right_point.y, 0, get_cv_max_int())
+        # left_point.x = clamp(left_point.x, 0, get_cv_max_int())
+        # left_point.y = clamp(left_point.y, 0, get_cv_max_int())
+
+        cv.line(mat, tuple(left_point), tuple(right_point), (0, 0, 255), thickness=2)
 
     def __str__(self):
         return '%s, %s, m=%d' % (self.point1, self.point2, self._slope())
 
+
+class ContourInfo:
+    """
+    A class that contains a line created from the contour's extreme top and bottom points.
+    Also a line drawn from a seed's center, to the averaged extreme point of the contour.
+    """
+
+    def __init__(self, contour_line: Line, seed_line: Line):
+        self.contour_line = contour_line
+        self.seed_line = seed_line
+
+    def average_contour(self, other):
+        self.contour_line = self.contour_line.average(other.contour_line)
+        # self.seed_line = self.seed_line.average(other.seed_line)
+        return self
 
 def get_image_below_y(image, y):
     h, w = image.shape[:2]
@@ -90,7 +113,7 @@ class SeedSection:
     Represents a section of a seed in a image.
     """
 
-    def __init__(self, mat, seed_centroid: Location, relative_seed_x: int):
+    def __init__(self, mat, seed_centroid: Location, relative_seed_x: float):
         self.img = mat
         self.seed_center_x = relative_seed_x
         self.root_img = get_image_below_y(mat, seed_centroid.y)
@@ -150,49 +173,59 @@ class SeedSection:
                 self.root_contours.append(hull)
 
     def __find_lines(self):
+        seed_point = Location(self.seed_center_x, 0)
+        tmp_contour_infos = []
         for c in self.root_contours:
             # determine the most extreme points along the contour
-            extLeft = tuple(c[c[:, :, 0].argmin()][0])
-            extRight = tuple(c[c[:, :, 0].argmax()][0])
-            extTop = tuple(c[c[:, :, 1].argmin()][0])
-            extBot = tuple(c[c[:, :, 1].argmax()][0])
+            extLeft = Location.from_tuple(tuple(c[c[:, :, 0].argmin()][0]))
+            extRight = Location.from_tuple(tuple(c[c[:, :, 0].argmax()][0]))
+            extTop = Location.from_tuple(tuple(c[c[:, :, 1].argmin()][0]))
+            extBot = Location.from_tuple(tuple(c[c[:, :, 1].argmax()][0]))
 
-            point_1 = Location(-1, -1)
-            point_2 = Location(-1, -1)
-
-            cv.circle(self.root_img, extLeft, 8, (0, 0, 255), -1)
-            cv.circle(self.root_img, extRight, 8, (0, 255, 0), -1)
-            cv.circle(self.root_img, extTop, 8, (255, 0, 0), -1)
-            cv.circle(self.root_img, extBot, 8, (255, 255, 0), -1)
+            # cv.circle(self.root_img, tuple(extLeft), 8, (0, 0, 255), -1)
+            # cv.circle(self.root_img, tuple(extRight), 8, (0, 255, 0), -1)
+            # cv.circle(self.root_img, tuple(extTop), 8, (255, 0, 0), -1)
+            # cv.circle(self.root_img, tuple(extBot), 8, (255, 255, 0), -1)
             
-            point_1 = Location(extTop[0], extTop[1])
-            point_2 = Location(extBot[0], extBot[1])
+            averaged_extremes = extLeft.average(extRight).average(extTop).average(extBot)
 
-            line = Line(point_1, point_2)
+            cv.circle(self.root_img, tuple(averaged_extremes), 8, (0, 0, 0), -1)
 
-            self.root_lines.append(line)
+            seed_line = Line(seed_point, averaged_extremes)
+            contour_line = Line(extTop, extBot)
 
-        # loop through one more time, combining all similar lines.
-        lines_copy = self.root_lines.copy()
-        for i, line in enumerate(lines_copy):
-            for j, other_line in enumerate(lines_copy):
-                if (j == i):
-                    continue
+            # cv.line(self.root_img, tuple(extTop), tuple(extBot), (200, 200, 200), thickness=3)
+
+            if (contour_line.distance(seed_point) < self.height):
+                contour_info = ContourInfo(contour_line, seed_line)
+                tmp_contour_infos.append(contour_info)
+
+        tmp_combined_infos = []
+
+        for info in tmp_contour_infos:
+            line: Line = info.contour_line
+            matched: bool = False
+            for other_info in tmp_contour_infos:
+                other_line: Line = other_info.contour_line
+                
                 dist = line.distance(other_line.point1)
                 v_slope = abs(other_line._slope() - line._slope())
                 print('[Slope_diff]: %lf' % (v_slope))
-                if v_slope < 1.5 and dist < self.width / 3:
-                    if (line in self.root_lines):
-                        self.root_lines.remove(line)
-                    if (other_line in self.root_lines):
-                        self.root_lines.remove(other_line)
+                if v_slope < (self.height / self.width) and dist < self.width / 3:
+                    matched = True
+                    tmp_combined_infos.append(info.average_contour(other_info))
+            
+            if (not matched):
+                tmp_combined_infos.append(info)
 
-                    line = line.combine(other_line)
-                    self.root_lines.append(line)
+        for info in tmp_combined_infos:
+            contour_line = info.contour_line
+
+            distance = contour_line.distance(seed_point)
+            if distance < self.width:
+                self.root_lines.append(info.seed_line)
+
 
     def draw_lines(self, mat):
-        seed_point = Location(self.seed_center_x, 0)
         for line in self.root_lines:
-            dist = line.distance(seed_point)
-            if dist < self.width:
-                line.draw_entire_width(mat)
+            line.draw_entire_width(mat)
