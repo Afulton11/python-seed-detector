@@ -36,9 +36,9 @@ class RangleImage:
         # Apply Another blur to hsv image, We only want the large blobs that stand out
         # with specific hsv values.
         #
-        blurred_hue = cv.medianBlur(hue_img.copy(), 21)
+        blurred_hue = cv.medianBlur(hue_img.copy(), 25)
         # use a bilateral blur to keep edges sharp, but blend similar colors
-        blurred_hue = cv.bilateralFilter(blurred_hue, 9, 75, 75)
+        blurred_hue = cv.bilateralFilter(blurred_hue, 7, 201, 201)
 
         self.hsv_img = blurred_hue.copy()
 
@@ -51,7 +51,7 @@ class RangleImage:
         seed_mask = cv.bitwise_or(lower_mask, upper_mask)
 
         # connect close blobs
-        seed_mask = cv.dilate(seed_mask, np.ones((5, 5), np.uint8), iterations=5)
+        seed_mask = cv.dilate(seed_mask, np.ones((10, 10), np.uint8), iterations=5)
 
         # Remove random blobs
         kernel = cv.getStructuringElement(cv.MORPH_RECT, (20, 20))
@@ -103,8 +103,10 @@ class RangleImage:
 
             seed_image = self.blurred_image[top : bottom, left : right]
             relative_seed_centroid_x = centroid.x - left
+
+            _, ext_bot_y = tuple(c[c[:, :, 1].argmax()][0])
             
-            section = SeedSection(seed_image, centroid, relative_seed_centroid_x)
+            section = SeedSection(seed_image, relative_seed_centroid_x, ext_bot_y - 100)
             sections.append(section)
 
         return sections

@@ -113,10 +113,10 @@ class SeedSection:
     Represents a section of a seed in a image.
     """
 
-    def __init__(self, mat, seed_centroid: Location, relative_seed_x: float):
+    def __init__(self, mat, seed_x: float, seed_y: float):
         self.img = mat
-        self.seed_center_x = relative_seed_x
-        self.root_img = get_image_below_y(mat, seed_centroid.y)
+        self.seed_center_x = seed_x
+        self.root_img = get_image_below_y(mat, seed_y)
         self.root_contours = []
         self.root_lines = []
 
@@ -135,6 +135,14 @@ class SeedSection:
         # Convert the image to hsv.
         hsv = cv.cvtColor(self.root_img, cv.COLOR_BGR2HSV)
         
+        #
+        # Apply Another blur to hsv image, We only want the large blobs that stand out
+        # with specific hsv values.
+        #
+        blurred_hue = cv.medianBlur(hsv.copy(), 21)
+        # use a bilateral blur to keep edges sharp, but blend similar colors
+        hsv = cv.bilateralFilter(blurred_hue, 9, 75, 75)
+
         # get the range of hsv values for roots
         upper_hsv = cv.inRange(hsv, np.array([130, 0, 150]), np.array([160, 15, 180]))
         lower_hsv = cv.inRange(hsv, np.array([100, 0, 110]), np.array([130, 15, 170]))
@@ -143,11 +151,11 @@ class SeedSection:
         self.combined_hsv = combined_hsv.copy()
 
         # Remove noise
-        remove_noise_kernel = np.ones((10, 10), np.uint8)
+        remove_noise_kernel = np.ones((11, 11), np.uint8)
         combined_hsv = cv.morphologyEx(combined_hsv, cv.MORPH_OPEN, remove_noise_kernel)
 
         # connect close blobs
-        threshed = cv.dilate(combined_hsv, np.ones((2, 2), np.uint8), iterations=10)
+        threshed = cv.dilate(combined_hsv, np.ones((3, 3), np.uint8), iterations=5)
 
         # debug combined image
         # self.combined_hsv = combined_hsv
