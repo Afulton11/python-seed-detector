@@ -136,13 +136,11 @@ class SeedSection:
         hsv = cv.cvtColor(self.root_img, cv.COLOR_BGR2HSV)
         
         # get the range of hsv values for roots
-        upper_hsv = cv.inRange(hsv, np.array([0, 0, 150]), np.array([25, 20, 180]))
-        # upper_hsv2 = cv.inRange(hsv, np.array([10, 10, 150]), np.array([25, 20, 190]))
-        lower_hsv = cv.inRange(hsv, np.array([120, 0, 130]), np.array([155, 25, 170]))
-        lower_hsv2 = cv.inRange(hsv, np.array([150, 5, 140]), np.array([180, 25, 165]))
+        upper_hsv = cv.inRange(hsv, np.array([130, 0, 150]), np.array([160, 15, 180]))
+        lower_hsv = cv.inRange(hsv, np.array([100, 0, 110]), np.array([130, 15, 170]))
 
         combined_hsv = cv.bitwise_or(upper_hsv, lower_hsv)
-        combined_hsv = cv.bitwise_or(combined_hsv, lower_hsv2)
+        self.combined_hsv = combined_hsv.copy()
 
         # Remove noise
         remove_noise_kernel = np.ones((10, 10), np.uint8)
@@ -152,7 +150,7 @@ class SeedSection:
         threshed = cv.dilate(combined_hsv, np.ones((2, 2), np.uint8), iterations=10)
 
         # debug combined image
-        self.combined_hsv = combined_hsv
+        # self.combined_hsv = combined_hsv
         
         # Threshold the upper_hsv image so that we can find contours
         # _, thresh = cv.threshold(threshed, 1, 255, cv.THRESH_BINARY)

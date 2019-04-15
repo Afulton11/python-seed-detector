@@ -3,7 +3,7 @@ import numpy as np
 from entities.seed import SeedSection
 from entities.rangle_image import RangleImage
 
-img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7108.JPG'
+img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7109.JPG'
 img_path_2 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
 
 img = cv.imread(img_path_1, cv.IMREAD_COLOR)
@@ -52,9 +52,8 @@ def run(src=img):
     image_window_list = [
         ('seed_mask', rangler.seed_mask, w, h),
         ('seed_contours', img_with_seed_contours, w, h),
-        ('original', rangler.original_image, w, h),
         ('blurred', rangler.blurred_image, w, h),
-        ('hsv', cv.cvtColor(rangler.original_image, cv.COLOR_BGR2HSV), w, h)
+        ('hsv', rangler.hsv_img, w, h)
     ]
 
     for index, seed in enumerate(rangler.seeds):
@@ -70,6 +69,9 @@ def run(src=img):
         )
         image_window_list.insert(0,
             ('roots_filtered_%d' % (index + 1), seed.root_mask, root_w, root_h)
+        )
+        image_window_list.insert(0,
+            ('root_hsv_%d' % (index + 1), seed.combined_hsv, root_w, root_h)
         )
         image_window_list.insert(0,
             ('seed_%d' % (index + 1), seed.img, seed.width, seed.height)

@@ -17,7 +17,11 @@ class RangleImage:
 
     def __init__(self, mat):
         self.original_image = mat
-        self.blurred_image = cv.GaussianBlur(mat, (25, 25), 0)
+        
+        blur = cv.medianBlur(mat.copy(), 21)
+        # use a bilateral blur to keep edges sharp, but blend similar colors
+        self.blurred_image = cv.bilateralFilter(blur, 9, 75, 75)
+
         self.seeds = List[SeedSection]
         self.seed_contours = []
 
@@ -28,8 +32,18 @@ class RangleImage:
     def findSeeds(self):
         hue_img = cv.cvtColor(self.blurred_image, cv.COLOR_BGR2HSV)
 
-        lower_hue_range = cv.inRange(hue_img, np.array([0, 45, 140]), np.array([20, 95, 215]))
-        upper_hue_range = cv.inRange(hue_img, np.array([10, 20, 160]), np.array([40, 50, 200]))
+        #
+        # Apply Another blur to hsv image, We only want the large blobs that stand out
+        # with specific hsv values.
+        #
+        blurred_hue = cv.medianBlur(hue_img.copy(), 21)
+        # use a bilateral blur to keep edges sharp, but blend similar colors
+        blurred_hue = cv.bilateralFilter(blurred_hue, 9, 75, 75)
+
+        self.hsv_img = blurred_hue.copy()
+
+        lower_hue_range = cv.inRange(blurred_hue, np.array([0, 45, 140]), np.array([20, 95, 215]))
+        upper_hue_range = cv.inRange(blurred_hue, np.array([10, 20, 160]), np.array([40, 50, 200]))
 
         lower_mask = cv.addWeighted(lower_hue_range, 1.0, 1, 1.0, 0.0)
         upper_mask = cv.addWeighted(upper_hue_range, 1.0, 1, 1.0, 0.0)
