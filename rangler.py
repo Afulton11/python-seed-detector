@@ -3,7 +3,7 @@ import numpy as np
 from entities.seed import SeedSection
 from entities.rangle_image import RangleImage
 
-img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7107.JPG'
+img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7108.JPG'
 img_path_2 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
 
 img = cv.imread(img_path_1, cv.IMREAD_COLOR)

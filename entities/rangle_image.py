@@ -35,6 +35,14 @@ class RangleImage:
         upper_mask = cv.addWeighted(upper_hue_range, 1.0, 1, 1.0, 0.0)
 
         seed_mask = cv.bitwise_or(lower_mask, upper_mask)
+
+        # connect close blobs
+        seed_mask = cv.dilate(seed_mask, np.ones((5, 5), np.uint8), iterations=5)
+
+        # Remove random blobs
+        kernel = cv.getStructuringElement(cv.MORPH_RECT, (20, 20))
+        seed_mask = cv.morphologyEx(seed_mask, cv.MORPH_OPEN, kernel)
+
         self.seed_mask = seed_mask
 
         self.seed_contours = self.__find_seed_contours(seed_mask)
@@ -47,7 +55,7 @@ class RangleImage:
 
         contours, _ = cv.findContours(
             threshed_img.copy(),
-            cv.RETR_LIST,
+            cv.RETR_EXTERNAL,
             cv.CHAIN_APPROX_NONE
         )
         
