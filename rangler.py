@@ -3,7 +3,7 @@ import numpy as np
 from entities.seed import SeedSection
 from entities.rangle_image import RangleImage
 
-img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7109.JPG'
+img_path_1 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Bread Wheat/Images/IMG_7110.JPG'
 img_path_2 = '/Users/andrewfulton/Documents/School/Research/rangle/Root angle images/Durum NAM/Images/IMG_3432  (1) .JPG'
 
 img = cv.imread(img_path_1, cv.IMREAD_COLOR)
@@ -61,6 +61,8 @@ def run(src=img):
         root_h, root_w = drawn_root_img.shape[:2]
         seed_line_img = seed.root_img.copy()
         seed.draw_lines(seed_line_img)
+        print('[Seed_%d] Creating window...' % (index + 1))
+        seed.get_rangle()
         image_window_list.insert(0,
             ('root_lines_%d' % (index + 1), seed_line_img, root_w, root_h)
         )

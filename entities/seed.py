@@ -15,13 +15,12 @@ class Line:
         assert(hasattr(point2, 'y'))
         self.point1 = point1
         self.point2 = point2
+        self.dx = float(self.point1.x - self.point2.x)
+        self.dy =float(self.point1.y - self.point2.y)
 
     def _slope(self):
-        vx = float(self.point1.x - self.point2.x)
-        vy = float(self.point1.y - self.point2.y)
-
         try:
-            return vy / vx
+            return self.dy / self.dx
         except ZeroDivisionError:
             return get_cv_max_int()
 
@@ -55,6 +54,12 @@ class Line:
             x = y
         return Location(x, y)
 
+    def angleWithHorizontal(self) -> float:
+        """
+        returns the angle (in radians) this line makes with any horizontal line
+        """
+        return math.atan2(self.dy, self.dx)
+
     def draw(self, mat):
         print('[Drawing line]: %s' % (self.__str__()))
         cv.line(mat, (self.point1.x, self.point1.y), (self.point2.x, self.point2.y), (0, 0, 255), thickness=2, lineType=cv.LINE_AA)
@@ -73,11 +78,6 @@ class Line:
 
         right_point.x = w
         right_point.y = m * right_point.x + b
-
-        # right_point.x = clamp(right_point.x, 0, get_cv_max_int())
-        # right_point.y = clamp(right_point.y, 0, get_cv_max_int())
-        # left_point.x = clamp(left_point.x, 0, get_cv_max_int())
-        # left_point.y = clamp(left_point.y, 0, get_cv_max_int())
 
         cv.line(mat, tuple(left_point), tuple(right_point), (0, 0, 255), thickness=2)
 
@@ -106,7 +106,6 @@ def get_image_below_y(image, y):
     new_h, new_w = cropped_img.shape[:2]
     print('[get_image_below_y]: Cropped (%d, %d) to (%d, %d) using y=[%d]!' % (w, h, new_w, new_h, y))
     return cropped_img.copy()
-
 
 class SeedSection:
     """
@@ -139,7 +138,7 @@ class SeedSection:
         # Apply Another blur to hsv image, We only want the large blobs that stand out
         # with specific hsv values.
         #
-        blurred_hue = cv.medianBlur(hsv.copy(), 21)
+        blurred_hue = cv.medianBlur(hsv, 21)
         # use a bilateral blur to keep edges sharp, but blend similar colors
         hsv = cv.bilateralFilter(blurred_hue, 9, 75, 75)
 
@@ -235,3 +234,18 @@ class SeedSection:
     def draw_lines(self, mat):
         for line in self.root_lines:
             line.draw_entire_width(mat)
+
+    def get_rangle(self):
+        largest_angle = 0
+        for l in self.root_lines:
+            angle = l.angleWithHorizontal()
+            for l_other in self.root_lines:
+                other_angle = l_other.angleWithHorizontal()
+                if l != l_other and angle - other_angle > largest_angle:
+                    largest_angle = angle - other_angle
+
+        degrees = math.degrees(largest_angle)
+        print('[get_rangle]: Found angle of : %lf' % (degrees))
+        return largest_angle
+
+
