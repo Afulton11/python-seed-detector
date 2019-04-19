@@ -97,7 +97,7 @@ class ContourInfo:
 
     def average_contour(self, other):
         self.contour_line = self.contour_line.average(other.contour_line)
-        # self.seed_line = self.seed_line.average(other.seed_line)
+        self.seed_line = self.seed_line.average(other.seed_line)
         return self
 
 def get_image_below_y(image, y):
@@ -143,11 +143,11 @@ class SeedSection:
         hsv = cv.bilateralFilter(blurred_hue, 9, 75, 75)
 
         # get the range of hsv values for roots
-        upper_hsv = cv.inRange(hsv, np.array([130, 0, 150]), np.array([160, 15, 180]))
-        lower_hsv = cv.inRange(hsv, np.array([100, 0, 110]), np.array([130, 15, 170]))
-
-        combined_hsv = cv.bitwise_or(upper_hsv, lower_hsv)
-        self.combined_hsv = combined_hsv.copy()
+        darker_roots = cv.inRange(hsv, np.array([100, 0, 90]), np.array([110, 20, 100]))
+        standard_roots = cv.inRange(hsv, np.array([105, 0, 105]), np.array([160, 18, 180]))
+        
+        combined_hsv = cv.bitwise_or(darker_roots, standard_roots)
+        self.combined_hsv = combined_hsv
 
         # Remove noise
         remove_noise_kernel = np.ones((11, 11), np.uint8)
@@ -174,7 +174,7 @@ class SeedSection:
             hull = c
             area: float = cv.contourArea(hull)
 
-            if 100 < area < (self.height * self.width / 2):
+            if self.height * self.width * .002 < area < self.height * self.width / 2:
                 self.root_contours.append(hull)
 
     def __find_lines(self):
@@ -215,8 +215,7 @@ class SeedSection:
                 
                 dist = line.distance(other_line.point1)
                 v_slope = abs(other_line._slope() - line._slope())
-                print('[Slope_diff]: %lf' % (v_slope))
-                if v_slope < (self.height / self.width) and dist < self.width / 3:
+                if v_slope < (self.height / self.width) and dist < self.width / 20:
                     matched = True
                     tmp_combined_infos.append(info.average_contour(other_info))
             
@@ -224,11 +223,7 @@ class SeedSection:
                 tmp_combined_infos.append(info)
 
         for info in tmp_combined_infos:
-            contour_line = info.contour_line
-
-            distance = contour_line.distance(seed_point)
-            if distance < self.width:
-                self.root_lines.append(info.seed_line)
+            self.root_lines.append(info.seed_line)
 
 
     def draw_lines(self, mat):
