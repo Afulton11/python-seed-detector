@@ -84,7 +84,7 @@ class RangleImage:
 
             is_not_near_top = centroid.y > h / 2.25
             is_not_near_edge = centroid.x > (w / 12) and centroid.x < (w - (w / 12))
-            has_area_of_a_seed = (2000 < area < (h * w / 8))
+            has_area_of_a_seed = ((h / 20) * (w / 20) < area < (h * w / 8))
 
             if is_not_near_top and is_not_near_edge and has_area_of_a_seed:
                 filtered_contours.append(c)
